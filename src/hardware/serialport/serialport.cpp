@@ -1321,7 +1321,7 @@ public:
 				if (!serialports[i]->InstallationSuccessful)  {
 					// serial port name was wrong or already in use
 					delete serialports[i];
-					serialports[i] = NULL;
+					serialports[i] = nullptr;
 				}
 			}
 #endif
@@ -1330,21 +1330,21 @@ public:
 				serialports[i] = new CSerialModem (i, &cmd);
 				if (!serialports[i]->InstallationSuccessful)  {
 					delete serialports[i];
-					serialports[i] = NULL;
+					serialports[i] = nullptr;
 				}
 			}
 			else if(type=="nullmodem") {
 				serialports[i] = new CNullModem (i, &cmd);
 				if (!serialports[i]->InstallationSuccessful)  {
 					delete serialports[i];
-					serialports[i] = NULL;
+					serialports[i] = nullptr;
 				}
 			}
 #endif
 			else if(type=="disabled") {
-				serialports[i] = NULL;
+				serialports[i] = nullptr;
 			} else {
-				serialports[i] = NULL;
+				serialports[i] = nullptr;
 				LOG_MSG("SERIAL: Port %" PRIu8 " invalid type \"%s\".",
 				        static_cast<uint8_t>(i + 1), type.c_str());
 			}
@@ -1356,10 +1356,8 @@ public:
 	~SERIALPORTS()
 	{
 		for (uint8_t i = 0; i < SERIAL_MAX_PORTS; ++i) {
-			if (serialports[i]) {
-				delete serialports[i];
-				serialports[i] = 0;
-			}
+			delete serialports[i];
+			serialports[i] = nullptr;
 		}
 #if C_MODEM
 		MODEM_ClearPhonebook();
@@ -1373,7 +1371,7 @@ void SERIAL_Destroy(Section *sec)
 {
 	(void)sec; // unused, but required for API compliance
 	delete testSerialPortsBaseclass;
-	testSerialPortsBaseclass = NULL;
+	testSerialPortsBaseclass = nullptr;
 }
 
 void SERIAL_Init (Section * sec) {
