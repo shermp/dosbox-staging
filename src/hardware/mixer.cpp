@@ -996,8 +996,11 @@ void MIXER_Init(Section* sec) {
 
 	// Initialize the 8-bit to 16-bit lookup table
 	fill_8to16_lut();
+}
 
-	PROGRAMS_MakeFile("MIXER.COM",MIXER_ProgramStart);
+void MIXER_MakeProgram(MAYBE_UNUSED Section *sec)
+{
+	PROGRAMS_MakeFile("MIXER.COM", MIXER_ProgramStart);
 }
 
 void MIXER_CloseAudioDevice()
