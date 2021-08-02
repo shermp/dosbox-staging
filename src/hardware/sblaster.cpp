@@ -156,9 +156,9 @@ struct SB_INFO {
 		bool haveref;
 	} adpcm;
 	struct {
-		Bitu base;
-		Bitu irq;
-		Bit8u dma8,dma16;
+		uint16_t base;
+		uint8_t irq;
+		Bit8u dma8, dma16;
 	} hw;
 	struct {
 		Bits value;
@@ -1016,7 +1016,8 @@ static void DSP_DoCommand(void) {
 		break;
 	case 0x80:	/* Silence DAC */
 		PIC_AddEvent(&DSP_RaiseIRQEvent,
-			(1000.0f*(1+sb.dsp.in.data[0]+(sb.dsp.in.data[1] << 8))/sb.freq));
+		             1000.0f * (1 + sb.dsp.in.data[0] + static_cast<float>(sb.dsp.in.data[1] << 8)) /
+		                     static_cast<float>(sb.freq));
 		break;
 	case 0xb0:	case 0xb1:	case 0xb2:	case 0xb3:  case 0xb4:	case 0xb5:	case 0xb6:	case 0xb7:
 	case 0xb8:	case 0xb9:	case 0xba:	case 0xbb:  case 0xbc:	case 0xbd:	case 0xbe:	case 0xbf:
@@ -1243,7 +1244,7 @@ static float calc_vol(Bit8u amount) {
 		db *= 2.0f;
 		if (count > 20) db -= 1.0f;
 	}
-	return (float) pow (10.0f,-0.05f * db);
+	return powf(10.0f, -0.05f * db);
 }
 static void CTMIXER_UpdateVolumes(void) {
 	if (!sb.mixer.enabled) return;
@@ -1541,15 +1542,12 @@ static Bit8u CTMIXER_Read(void) {
 	return ret;
 }
 
-
-static Bitu read_sb(Bitu port,Bitu /*iolen*/) {
-	switch (port-sb.hw.base) {
-	case MIXER_INDEX:
-		return sb.mixer.index;
-	case MIXER_DATA:
-		return CTMIXER_Read();
-	case DSP_READ_DATA:
-		return DSP_ReadData();
+static uint8_t read_sb(io_port_t port, io_width_t)
+{
+	switch (port - sb.hw.base) {
+	case MIXER_INDEX: return sb.mixer.index;
+	case MIXER_DATA: return CTMIXER_Read();
+	case DSP_READ_DATA: return DSP_ReadData();
 	case DSP_READ_STATUS:
 		//TODO See for high speed dma :)
 		if (sb.irq.pending_8bit)  {
@@ -1581,29 +1579,21 @@ static Bitu read_sb(Bitu port,Bitu /*iolen*/) {
 	return 0xff;
 }
 
-static void write_sb(Bitu port,Bitu val,Bitu /*iolen*/) {
-	Bit8u val8=(Bit8u)(val&0xff);
-	switch (port-sb.hw.base) {
-	case DSP_RESET:
-		DSP_DoReset(val8);
-		break;
-	case DSP_WRITE_DATA:
-		DSP_DoWrite(val8);
-		break;
-	case MIXER_INDEX:
-		sb.mixer.index=val8;
-		break;
-	case MIXER_DATA:
-		CTMIXER_Write(val8);
-		break;
-	default:
-		LOG(LOG_SB,LOG_NORMAL)("Unhandled write to SB Port %4X",port);
-		break;
+static void write_sb(io_port_t port, uint8_t val, io_width_t)
+{
+	Bit8u val8 = (Bit8u)(val & 0xff);
+	switch (port - sb.hw.base) {
+	case DSP_RESET: DSP_DoReset(val8); break;
+	case DSP_WRITE_DATA: DSP_DoWrite(val8); break;
+	case MIXER_INDEX: sb.mixer.index = val8; break;
+	case MIXER_DATA: CTMIXER_Write(val8); break;
+	default: LOG(LOG_SB, LOG_NORMAL)("Unhandled write to SB Port %4X", port); break;
 	}
 }
 
-static void adlib_gusforward(Bitu /*port*/,Bitu val,Bitu /*iolen*/) {
-	adlib_commandreg=(Bit8u)(val&0xff);
+static void adlib_gusforward(io_port_t, uint8_t val, io_width_t)
+{
+	adlib_commandreg = (Bit8u)(val & 0xff);
 }
 
 bool SB_Get_Address(Bitu& sbaddr, Bitu& sbirq, Bitu& sbdma) {
@@ -1710,7 +1700,6 @@ public:
 	          MixerChan{},
 	          oplmode(OPL_none)
 	{
-		Bitu i;
 		Section_prop * section=static_cast<Section_prop *>(configuration);
 
 		sb.hw.base=section->Get_hex("sbbase");
@@ -1728,11 +1717,9 @@ public:
 		Find_Type_And_Opl(section,sb.type,oplmode);
 
 		switch (oplmode) {
-		case OPL_none:
-			WriteHandler[0].Install(0x388,adlib_gusforward,IO_MB);
-			break;
+		case OPL_none: WriteHandler[0].Install(0x388, adlib_gusforward, io_width_t::byte); break;
 		case OPL_cms:
-			WriteHandler[0].Install(0x388,adlib_gusforward,IO_MB);
+			WriteHandler[0].Install(0x388, adlib_gusforward, io_width_t::byte);
 			CMS_Init(section);
 			break;
 		case OPL_opl2:
@@ -1751,14 +1738,17 @@ public:
 		sb.dsp.out.lastval=0xaa;
 		sb.dma.chan=NULL;
 
-		for (i=4;i<=0xf;i++) {
-			if (i==8 || i==9) continue;
-			//Disable mixer ports for lower soundblaster
-			if ((sb.type==SBT_1 || sb.type==SBT_2) && (i==4 || i==5)) continue;
-			ReadHandler[i].Install(sb.hw.base+i,read_sb,IO_MB);
-			WriteHandler[i].Install(sb.hw.base+i,write_sb,IO_MB);
+		for (uint8_t i = 4; i <= 0xf; ++i) {
+			if (i == 8 || i == 9)
+				continue;
+			// Disable mixer ports for lower soundblaster
+			if ((sb.type == SBT_1 || sb.type == SBT_2) && (i == 4 || i == 5))
+				continue;
+			ReadHandler[i].Install(sb.hw.base + i, read_sb, io_width_t::byte);
+			WriteHandler[i].Install(sb.hw.base + i, write_sb, io_width_t::byte);
 		}
-		for (i=0;i<256;i++) ASP_regs[i] = 0;
+		for (uint16_t i = 0; i < 256; ++i)
+			ASP_regs[i] = 0;
 		ASP_regs[5] = 0x01;
 		ASP_regs[9] = 0xf8;
 
