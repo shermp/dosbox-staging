@@ -463,7 +463,7 @@ void VGA_SetClock(Bitu which,Bitu target);
 void VGA_DACSetEntirePalette(void);
 void VGA_StartRetrace(void);
 void VGA_StartUpdateLFB(void);
-void VGA_SetBlinking(Bitu enabled);
+void VGA_SetBlinking(uint8_t enabled);
 void VGA_SetCGA2Table(Bit8u val0,Bit8u val1);
 void VGA_SetCGA4Table(Bit8u val0,Bit8u val1,Bit8u val2,Bit8u val3);
 void VGA_ActivateHardwareCursor(void);
@@ -489,8 +489,8 @@ typedef struct {
 	Bit8u hor_overflow;
 	Bitu offset;
 	Bitu modeNo;
-	Bitu htotal;
-	Bitu vtotal;
+	uint32_t htotal;
+	uint32_t vtotal;
 } VGA_ModeExtraData;
 
 // Vector function prototypes
