@@ -64,6 +64,23 @@ io_val_t IO_ReadB(io_port_t port);
 io_val_t IO_ReadW(io_port_t port);
 io_val_t IO_ReadD(io_port_t port);
 
+// IO-width sized API
+
+enum class io_width_t : uint8_t {
+	byte = sizeof(uint8_t),
+	word = sizeof(uint16_t),
+	dword = sizeof(uint32_t),
+};
+
+using io_read_f = std::function<uint32_t(io_port_t port, io_width_t width)>;
+using io_write_f = std::function<void(io_port_t port, io_val_t val, io_width_t width)>;
+
+void IO_RegisterReadHandler(io_port_t port, io_read_f handler, io_width_t max_width, io_port_t range = 1);
+void IO_RegisterWriteHandler(io_port_t port, io_write_f handler, io_width_t max_width, io_port_t range = 1);
+
+void IO_FreeReadHandler(io_port_t port, io_width_t max_width, io_port_t range = 1);
+void IO_FreeWriteHandler(io_port_t port, io_width_t max_width, io_port_t range = 1);
+
 /* Classes to manage the IO objects created by the various devices.
  * The io objects will remove itself on destruction.*/
 class IO_Base{
@@ -71,18 +88,22 @@ protected:
 	bool installed = false;
 	io_port_t m_port = 0u;
 	Bitu m_mask = 0u;
-	Bitu m_range = 0u;
+	io_width_t m_width = io_width_t::byte;
+	io_port_t m_range = 0u;
 };
+	//uint8_t m_range = 0;
 
 class IO_ReadHandleObject: private IO_Base{
 public:
 	void Install(io_port_t port, IO_ReadHandler handler, Bitu mask, Bitu range = 1);
+	void Install(io_port_t port, io_read_f handler, io_width_t max_width, io_port_t range = 1);
 	void Uninstall();
 	~IO_ReadHandleObject();
 };
 class IO_WriteHandleObject: private IO_Base{
 public:
 	void Install(io_port_t port, IO_WriteHandler handler, Bitu mask, Bitu range = 1);
+	void Install(io_port_t port, io_write_f handler, io_width_t max_width, io_port_t range = 1);
 	void Uninstall();
 	~IO_WriteHandleObject();
 };
