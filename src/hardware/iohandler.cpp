@@ -32,6 +32,7 @@
 
 //#define ENABLE_PORTLOG
 
+// Bitu-typed IO bus API
 std::unordered_map<io_port_t, IO_WriteHandler> io_writehandlers[IO_SIZES] = {};
 std::unordered_map<io_port_t, IO_ReadHandler> io_readhandlers[IO_SIZES] = {};
 
@@ -186,6 +187,7 @@ void IO_ReadHandleObject::Install(io_port_t port, IO_ReadHandler handler, Bitu m
 void IO_ReadHandleObject::Uninstall(){
 	if(!installed) return;
 	IO_FreeReadHandler(m_port,m_mask,m_range);
+	IO_FreeReadHandler(m_port, m_width, m_range);
 	installed=false;
 }
 
@@ -210,6 +212,7 @@ void IO_WriteHandleObject::Install(io_port_t port, IO_WriteHandler handler, Bitu
 void IO_WriteHandleObject::Uninstall() {
 	if(!installed) return;
 	IO_FreeWriteHandler(m_port,m_mask,m_range);
+	IO_FreeWriteHandler(m_port, m_width, m_range);
 	installed=false;
 }
 
@@ -544,6 +547,7 @@ void IO_WriteB(io_port_t port, io_val_t val)
 	else {
 		IO_USEC_write_delay();
 		WritePort(IO_MB, port, val);
+		write_byte_to_port(port, val);
 	}
 }
 
@@ -584,6 +588,7 @@ void IO_WriteW(io_port_t port, io_val_t val)
 	else {
 		IO_USEC_write_delay();
 		WritePort(IO_MW, port, val);
+		write_word_to_port(port, val);
 	}
 }
 
@@ -622,6 +627,7 @@ void IO_WriteD(io_port_t port, io_val_t val)
 		cpudecoder=old_cpudecoder;
 	} else {
 		WritePort(IO_MD, port, val);
+		write_dword_to_port(port, val);
 	}
 }
 
@@ -661,7 +667,10 @@ io_val_t IO_ReadB(io_port_t port)
 	}
 	else {
 		IO_USEC_read_delay();
-		retval = ReadPort(IO_MB, port);
+		if (io_readhandlers[0].find(port) != io_readhandlers[0].end())
+			retval = ReadPort(IO_MB, port);
+		else
+			retval = read_byte_from_port(port);
 	}
 	log_io(0, false, port, retval);
 	return retval;
@@ -702,7 +711,10 @@ io_val_t IO_ReadW(io_port_t port)
 	}
 	else {
 		IO_USEC_read_delay();
-		retval = ReadPort(IO_MW, port);
+		if (io_readhandlers[1].find(port) != io_readhandlers[1].end())
+			retval = ReadPort(IO_MW, port);
+		else
+			retval = read_word_from_port(port);
 	}
 	log_io(1, false, port, retval);
 	return retval;
@@ -741,7 +753,10 @@ io_val_t IO_ReadD(io_port_t port)
 		memcpy(&lflags,&old_lflags,sizeof(LazyFlags));
 		cpudecoder=old_cpudecoder;
 	} else {
-		retval = ReadPort(IO_MD, port);
+		if (io_readhandlers[2].find(port) != io_readhandlers[2].end())
+			retval = ReadPort(IO_MD, port);
+		else
+			retval = read_dword(port);
 	}
 
 	log_io(2, false, port, retval);
@@ -769,6 +784,19 @@ public:
 			io_writehandlers[i].clear();
 		}
 		DEBUG_LOG_MSG("IOBUS: Handlers consumed %lu total bytes", total_bytes);
+
+		size_t new_total_bytes = 0u;
+		for (uint8_t i = 0; i < IO_WIDTHS; ++i) {
+			const size_t readers = io_read_handlers[i].size();
+			const size_t writers = io_write_handlers[i].size();
+			DEBUG_LOG_MSG("IOBUS-NEW: Releasing %lu read and %lu write %d-bit port handlers", readers,
+			              writers, 8 << i);
+			new_total_bytes += readers * sizeof(io_read_f) + sizeof(io_read_handlers[i]);
+			new_total_bytes += writers * sizeof(io_write_f) + sizeof(io_write_handlers[i]);
+			io_read_handlers[i].clear();
+			io_write_handlers[i].clear();
+		}
+		DEBUG_LOG_MSG("IOBUS-NEW: Handlers consumed %lu total bytes", new_total_bytes);
 	}
 };
 
