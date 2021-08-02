@@ -22,7 +22,8 @@
 #include "vga.h"
 #include "mem.h"
 
-void SVGA_S3_WriteCRTC(Bitu reg,Bitu val,Bitu /*iolen*/) {
+void SVGA_S3_WriteCRTC(io_port_t reg, uint8_t val, io_width_t)
+{
 	switch (reg) {
 	case 0x31:	/* CR31 Memory Configuration */
 //TODO Base address
@@ -342,7 +343,7 @@ void SVGA_S3_WriteCRTC(Bitu reg,Bitu val,Bitu /*iolen*/) {
 		VGA_SetupHandlers();
 		break;
 	case 0x6b:	// BIOS scratchpad: LFB address
-		vga.s3.reg_6b=(Bit8u)val;
+		vga.s3.reg_6b = val;
 		break;
 	default:
 		LOG(LOG_VGAMISC,LOG_NORMAL)("VGA:S3:CRTC:Write to illegal index %2X", reg );
@@ -350,7 +351,8 @@ void SVGA_S3_WriteCRTC(Bitu reg,Bitu val,Bitu /*iolen*/) {
 	}
 }
 
-Bitu SVGA_S3_ReadCRTC( Bitu reg, Bitu /*iolen*/) {
+uint8_t SVGA_S3_ReadCRTC(io_port_t reg, io_width_t)
+{
 	switch (reg) {
 	case 0x24:	/* attribute controller index (read only) */
 	case 0x26:
@@ -439,8 +441,10 @@ Bitu SVGA_S3_ReadCRTC( Bitu reg, Bitu /*iolen*/) {
 	}
 }
 
-void SVGA_S3_WriteSEQ(Bitu reg,Bitu val,Bitu /*iolen*/) {
-	if (reg>0x8 && vga.s3.pll.lock!=0x6) return;
+void SVGA_S3_WriteSEQ(io_port_t reg, uint8_t val, io_width_t)
+{
+	if (reg > 0x8 && vga.s3.pll.lock != 0x6)
+		return;
 	switch (reg) {
 	case 0x08:
 		vga.s3.pll.lock=val;
@@ -469,12 +473,12 @@ void SVGA_S3_WriteSEQ(Bitu reg,Bitu val,Bitu /*iolen*/) {
 	}
 }
 
-Bitu SVGA_S3_ReadSEQ(Bitu reg,Bitu /*iolen*/) {
+uint8_t SVGA_S3_ReadSEQ(io_port_t reg, io_width_t)
+{
 	/* S3 specific group */
-	if (reg>0x8 && vga.s3.pll.lock!=0x6) {
-		if (reg<0x1b) return 0;
-		else return reg;
-	}
+	if (reg > 0x8 && vga.s3.pll.lock != 0x6)
+		return (reg < 0x1b) ? 0 : static_cast<uint8_t>(reg);
+
 	switch (reg) {
 	case 0x08:		/* PLL Unlock */
 		return vga.s3.pll.lock;
