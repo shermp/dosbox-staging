@@ -25,52 +25,15 @@
 #include "dosbox.h"
 
 #include <functional>
-#include <unordered_map>
-
-#define IO_MB	0x1 // Byte (8-bit)
-#define IO_MW	0x2 // Word (16-bit)
-#define IO_MD	0x4 // DWord (32-bit)
-#define IO_MA	(IO_MB | IO_MW | IO_MD ) // All three
-#define IO_SIZES 3 // byte, word, and dword
-
-// Existing type sizes
-using io_port_t = Bitu;
-using io_val_t = Bitu;
-
-// Proposed type types
-using io_port_t_proposed = uint16_t; // DOS only supports 16-bit port addresses
-using io_val_t_proposed = uint32_t; // Handling exists up to a dword (or less)
-
-using IO_ReadHandler = std::function<Bitu(io_port_t port, Bitu iolen)>;
-using IO_WriteHandler = std::function<void(io_port_t port, io_val_t val, Bitu iolen)>;
-
-extern std::unordered_map<io_port_t, IO_WriteHandler> io_writehandlers[IO_SIZES];
-extern std::unordered_map<io_port_t, IO_ReadHandler> io_readhandlers[IO_SIZES];
-
-void IO_RegisterReadHandler(io_port_t port, IO_ReadHandler handler, Bitu mask, Bitu range = 1);
-void IO_RegisterWriteHandler(io_port_t port,
-                             IO_WriteHandler handler,
-                             Bitu mask,
-                             Bitu range = 1);
-
-void IO_FreeReadHandler(io_port_t port, Bitu mask, Bitu range = 1);
-void IO_FreeWriteHandler(io_port_t port, Bitu mask, Bitu range = 1);
-
-void IO_WriteB(io_port_t port, io_val_t val);
-void IO_WriteW(io_port_t port, io_val_t val);
-void IO_WriteD(io_port_t port, io_val_t val);
-
-io_val_t IO_ReadB(io_port_t port);
-io_val_t IO_ReadW(io_port_t port);
-io_val_t IO_ReadD(io_port_t port);
-
-// IO-width sized API
 
 enum class io_width_t : uint8_t {
 	byte = sizeof(uint8_t),
 	word = sizeof(uint16_t),
 	dword = sizeof(uint32_t),
 };
+
+using io_port_t = uint16_t; // DOS supports 16-bit port addresses
+using io_val_t = uint32_t; // DOS ports supports transactions up to 32 bits
 
 using io_read_f = std::function<uint32_t(io_port_t port, io_width_t width)>;
 using io_write_f = std::function<void(io_port_t port, io_val_t val, io_width_t width)>;
@@ -81,13 +44,20 @@ void IO_RegisterWriteHandler(io_port_t port, io_write_f handler, io_width_t max_
 void IO_FreeReadHandler(io_port_t port, io_width_t max_width, io_port_t range = 1);
 void IO_FreeWriteHandler(io_port_t port, io_width_t max_width, io_port_t range = 1);
 
+void IO_WriteB(io_port_t port, uint8_t val);
+void IO_WriteW(io_port_t port, uint16_t val);
+void IO_WriteD(io_port_t port, uint32_t val);
+
+uint8_t IO_ReadB(io_port_t port);
+uint16_t IO_ReadW(io_port_t port);
+uint32_t IO_ReadD(io_port_t port);
+
 /* Classes to manage the IO objects created by the various devices.
  * The io objects will remove itself on destruction.*/
 class IO_Base{
 protected:
 	bool installed = false;
 	io_port_t m_port = 0u;
-	Bitu m_mask = 0u;
 	io_width_t m_width = io_width_t::byte;
 	io_port_t m_range = 0u;
 };
@@ -95,25 +65,24 @@ protected:
 
 class IO_ReadHandleObject: private IO_Base{
 public:
-	void Install(io_port_t port, IO_ReadHandler handler, Bitu mask, Bitu range = 1);
 	void Install(io_port_t port, io_read_f handler, io_width_t max_width, io_port_t range = 1);
 	void Uninstall();
 	~IO_ReadHandleObject();
 };
 class IO_WriteHandleObject: private IO_Base{
 public:
-	void Install(io_port_t port, IO_WriteHandler handler, Bitu mask, Bitu range = 1);
 	void Install(io_port_t port, io_write_f handler, io_width_t max_width, io_port_t range = 1);
 	void Uninstall();
 	~IO_WriteHandleObject();
 };
 
-static INLINE void IO_Write(io_port_t port, Bit8u val)
+inline void IO_Write(io_port_t port, uint8_t val)
 {
 	IO_WriteB(port,val);
 }
-static INLINE Bit8u IO_Read(io_port_t port){
-	return (Bit8u)IO_ReadB(port);
+inline uint8_t IO_Read(io_port_t port)
+{
+	return IO_ReadB(port);
 }
 
 #endif
