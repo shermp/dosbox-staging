@@ -1648,7 +1648,7 @@ void KEYB::Run(void) {
 					WriteOut(MSG_Get("PROGRAM_KEYB_SHOWHELP"));
 					break;
 				default:
-					LOG(LOG_DOSMISC,LOG_ERROR)("KEYB:Invalid returncode %x",keyb_error);
+					LOG(LOG_DOSMISC,LOG_ERROR)("KEYB:Invalid returncode %x", static_cast<uint32_t>(keyb_error));
 					break;
 			}
 		}

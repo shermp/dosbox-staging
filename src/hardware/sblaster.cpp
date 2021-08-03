@@ -99,7 +99,8 @@ struct SB_INFO {
 	struct {
 		bool stereo,sign,autoinit;
 		DMA_MODES mode;
-		Bitu rate,mul;
+		uint32_t rate = 0; // sample rate
+		uint32_t mul = 0; // samples-per-millisecond multipler
 		Bit32u singlesize;		//size for single cycle transfers
 		Bit32u autosize;		//size for auto init transfers
 		Bitu left;				//Left in active cycle
@@ -743,9 +744,9 @@ static void DSP_DoDMATransfer(const DMA_MODES mode, Bitu freq, bool autoinit, bo
 
 #if (C_DEBUG)
 	LOG(LOG_SB, LOG_NORMAL)
-	("DMA Transfer:%s %s %s freq %d rate %d size %d", DmaModeName(),
+	("DMA Transfer:%s %s %s freq %u rate %u size %u", DmaModeName(),
 	 stereo ? "Stereo" : "Mono", autoinit ? "Auto-Init" : "Single-Cycle",
-	 freq, sb.dma.rate, sb.dma.left);
+	 static_cast<uint32_t>(freq), sb.dma.rate, sb.dma.left);
 #endif
 }
 
@@ -959,7 +960,7 @@ static void DSP_DoCommand(void) {
 		//Directly write to left?
 		sb.dma.left = 1 + sb.dsp.in.data[0] + (sb.dsp.in.data[1] << 8);
 		sb.dma.sign=false;
-		LOG(LOG_SB,LOG_ERROR)("DSP:Faked ADC for %d bytes",sb.dma.left);
+		LOG(LOG_SB,LOG_ERROR)("DSP:Faked ADC for %u bytes", static_cast<uint32_t>(sb.dma.left));
 		GetDMAChannel(sb.hw.dma8)->Register_Callback(DSP_ADC_CallBack);
 		break;
 	case 0x14:	/* Singe Cycle 8-Bit DMA DAC */
