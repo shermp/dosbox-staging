@@ -22,6 +22,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <array>
+#include <unordered_map>
 #include <memory>
 
 #include "mem.h"
@@ -41,8 +42,8 @@ PagingBlock paging;
 
 std::array<HostPt, TLB_SIZE> paging_tlb_read;
 std::array<HostPt, TLB_SIZE> paging_tlb_write;
-std::array<PageHandler *, TLB_SIZE> paging_tlb_readhandler;
-std::array<PageHandler *, TLB_SIZE> paging_tlb_writehandler;
+std::unordered_map<uint32_t, PageHandler *> paging_tlb_readhandler;
+std::unordered_map<uint32_t, PageHandler *> paging_tlb_writehandler;
 std::array<Bit32u, TLB_SIZE> paging_tlb_phys_page;
 
 #else
@@ -661,10 +662,32 @@ bool PAGING_ForcePageInit(Bitu lin_addr) {
 void PAGING_InitTLB(void) {
 	paging_tlb_read.fill(0);
 	paging_tlb_write.fill(0);
-	paging_tlb_readhandler.fill(&init_page_handler);
-	paging_tlb_writehandler.fill(&init_page_handler);
 
 	paging.links.used = 0;
+}
+
+PageHandler *get_tlb_readhandler(PhysPt address)
+{
+	const uint32_t page = address >> 12;
+	const auto handler = paging_tlb_readhandler.find(page);
+	return handler != paging_tlb_readhandler.end() ? handler->second
+	                                               : &init_page_handler;
+}
+
+PageHandler *get_tlb_writehandler(PhysPt address)
+{
+	const uint32_t page = address >> 12;
+	const auto handler = paging_tlb_writehandler.find(page);
+	return handler != paging_tlb_writehandler.end() ? handler->second
+	                                                : &init_page_handler;
+}
+
+static void clear_tbl_handlers(Bitu page)
+{
+	assert(page <= UINT32_MAX);
+	const auto page_32bit = static_cast<uint32_t>(page);
+	paging_tlb_readhandler.erase(page_32bit);
+	paging_tlb_writehandler.erase(page_32bit);
 }
 
 void PAGING_ClearTLB(void) {
@@ -673,8 +696,7 @@ void PAGING_ClearTLB(void) {
 		Bitu page=*entries++;
 		paging_tlb_read[page] = 0;
 		paging_tlb_write[page] = 0;
-		paging_tlb_readhandler[page] = &init_page_handler;
-		paging_tlb_writehandler[page] = &init_page_handler;
+		clear_tbl_handlers(page);
 	}
 	paging.links.used=0;
 }
@@ -683,8 +705,7 @@ void PAGING_UnlinkPages(Bitu lin_page,Bitu pages) {
 	for (;pages>0;pages--) {
 		paging_tlb_read[lin_page] = 0;
 		paging_tlb_write[lin_page] = 0;
-		paging_tlb_readhandler[lin_page] = &init_page_handler;
-		paging_tlb_writehandler[lin_page] = &init_page_handler;
+		clear_tbl_handlers(lin_page);
 		lin_page++;
 	}
 }
@@ -694,8 +715,7 @@ void PAGING_MapPage(Bitu lin_page,Bitu phys_page) {
 		paging.firstmb[lin_page]=phys_page;
 		paging_tlb_read[lin_page] = 0;
 		paging_tlb_write[lin_page] = 0;
-		paging_tlb_readhandler[lin_page] = &init_page_handler;
-		paging_tlb_writehandler[lin_page] = &init_page_handler;
+		clear_tbl_handlers(lin_page);
 	} else {
 		PAGING_LinkPage(lin_page,phys_page);
 	}

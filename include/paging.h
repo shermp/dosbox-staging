@@ -172,8 +172,6 @@ extern PagingBlock paging;
 
 extern std::array<HostPt, TLB_SIZE> paging_tlb_read;
 extern std::array<HostPt, TLB_SIZE> paging_tlb_write;
-extern std::array<PageHandler *, TLB_SIZE> paging_tlb_readhandler;
-extern std::array<PageHandler *, TLB_SIZE> paging_tlb_writehandler;
 extern std::array<Bit32u, TLB_SIZE> paging_tlb_phys_page;
 
 #else
@@ -207,14 +205,12 @@ static INLINE HostPt get_tlb_read(PhysPt address) {
 static INLINE HostPt get_tlb_write(PhysPt address) {
 	return paging_tlb_write[address >> 12];
 }
-static INLINE PageHandler* get_tlb_readhandler(PhysPt address) {
-	return paging_tlb_readhandler[address >> 12];
-}
-static INLINE PageHandler* get_tlb_writehandler(PhysPt address) {
-	return paging_tlb_writehandler[address >> 12];
-}
 
-/* Use these helper functions to access linear addresses in readX/writeX functions */
+PageHandler *get_tlb_readhandler(PhysPt address);
+PageHandler *get_tlb_writehandler(PhysPt address);
+
+/* Use these helper functions to access linear addresses in readX/writeX
+ * functions */
 static INLINE PhysPt PAGING_GetPhysicalPage(PhysPt linePage) {
 	return (paging_tlb_phys_page[linePage >> 12] << 12);
 }
