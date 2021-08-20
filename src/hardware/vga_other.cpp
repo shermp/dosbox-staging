@@ -838,9 +838,15 @@ static void write_cga(Bitu port, uint8_t val, Bitu /*iolen*/)
 static void PCJr_FindMode();
 
 static void Composite(bool pressed) {
-	if (!pressed) return;
-	if (++cga_comp>2) cga_comp=0;
-	LOG_MSG("Composite output: %s",(cga_comp==0)?"auto":((cga_comp==1)?"on":"off"));
+	if (!pressed)
+		return;
+
+	if (++cga_comp > 2)
+		cga_comp = 0;
+
+	LOG_MSG("COMPOSITE: State is %s", cga_comp == 0   ? "auto"
+	                                  : cga_comp == 1 ? "on"
+	                                                  : "off");
 	// switch RGB and Composite if in graphics mode
 	if (vga.tandy.mode_control & 0x2 && machine == MCH_PCJR)
 		PCJr_FindMode();
