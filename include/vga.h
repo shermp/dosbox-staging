@@ -21,6 +21,8 @@
 
 #include "dosbox.h"
 
+#include "control.h"
+
 //Don't enable keeping changes and mapping lfb probably...
 #define VGA_LFB_MAPPED
 //#define VGA_KEEP_CHANGES
@@ -455,6 +457,7 @@ void VGA_SetupGFX(void);
 void VGA_SetupSEQ(void);
 void VGA_SetupOther(void);
 void VGA_SetupXGA(void);
+void VGA_AddCompositeSettings(Config *conf);
 
 /* Some Support Functions */
 void VGA_SetClock(Bitu which,Bitu target);
