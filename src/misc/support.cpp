@@ -351,3 +351,19 @@ bool ends_with(const std::string &str, const std::string &suffix) noexcept
 	return (str.size() >= suffix.size() &&
 	        str.compare(str.size() - suffix.size(), suffix.size(), suffix) == 0);
 }
+
+/*
+  Returns a number wrapped between the lower and upper bounds.
+   - wrap(-1, 0, 4); // Returns 4
+   - wrap(5, 0, 4); // Returns 0
+
+  All credit to Charles Bailey, https://stackoverflow.com/a/707426
+*/
+int wrap(int val, int const lower_bound, int const upper_bound)
+{
+	const auto range_size = upper_bound - lower_bound + 1;
+	if (val < lower_bound)
+		val += range_size * ((lower_bound - val) / range_size + 1);
+
+	return lower_bound + (val - lower_bound) % range_size;
+}

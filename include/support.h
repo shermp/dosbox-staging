@@ -259,3 +259,6 @@ std::string safe_strerror(int err) noexcept;
 #endif
 
 void set_thread_name(std::thread &thread, const char *name);
+
+// Wrao the value into the bounded range. 
+int wrap(int val, int const lower_bound, int const upper_bound);
