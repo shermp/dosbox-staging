@@ -586,6 +586,64 @@ static uint8_t *VGA_TEXT_Herc_Draw_Line(Bitu vidstart, Bitu line)
 	return TempLine;
 }
 
+static Bit8u * VGA_TEXT_Draw_Line_9(Bitu vidstart, Bitu line) {
+        Bits font_addr;
+        Bit8u * draw=(Bit8u *)TempLine;
+        bool underline=(Bitu)(vga.crtc.underline_location&0x1f)==line;
+        Bit8u pel_pan=(Bit8u)vga.draw.panning;
+        if ((vga.attr.mode_control&0x20) && (vga.draw.lines_done>=vga.draw.split_line)) pel_pan=0;
+        const Bit8u* vidmem = VGA_Text_Memwrap(vidstart);
+        Bit8u chr=vidmem[0];
+        Bit8u col=vidmem[1];
+        Bit8u font=(vga.draw.font_tables[(col >> 3)&1][chr*32+line])<<pel_pan;
+        if (underline && ((col&0x07) == 0x01)) font=0xff;
+        Bit8u fg=col&0xf;
+        Bit8u bg=(Bit8u)(TXT_BG_Table[col>>4]&0xff);
+        Bitu draw_blocks=vga.draw.blocks;
+        draw_blocks++;
+        for (Bitu cx=1;cx<draw_blocks;cx++) {
+                if (pel_pan) {
+                        chr=vidmem[cx*2];
+                        col=vidmem[cx*2+1];
+                        if (underline && ((col&0x07) == 0x01)) font|=0xff>>(8-pel_pan);
+                        else font|=vga.draw.font_tables[(col >> 3)&1][chr*32+line]>>(8-pel_pan);
+                        fg=col&0xf;
+                        bg=(Bit8u)(TXT_BG_Table[col>>4]&0xff);
+                } else {
+                        chr=vidmem[(cx-1)*2];
+                        col=vidmem[(cx-1)*2+1];
+                        if (underline && ((col&0x07) == 0x01)) font=0xff;
+                        else font=vga.draw.font_tables[(col >> 3)&1][chr*32+line];
+                        fg=col&0xf;
+                        bg=(Bit8u)(TXT_BG_Table[col>>4]&0xff);
+                }
+                if (FontMask[col>>7]==0) font=0;
+                *draw++=(font&0x80)?fg:bg;              *draw++=(font&0x40)?fg:bg;
+                *draw++=(font&0x20)?fg:bg;              *draw++=(font&0x10)?fg:bg;
+                *draw++=(font&0x08)?fg:bg;              *draw++=(font&0x04)?fg:bg;
+                *draw++=(font&0x02)?fg:bg;
+                Bit8u last=(font&0x01)?fg:bg;
+                *draw++=last;
+                *draw++=((vga.attr.mode_control&0x04) && ((chr<0xc0) || (chr>0xdf))) ? bg : last;
+                if (pel_pan) {
+                        if (underline && ((col&0x07) == 0x01)) font=0xff;
+                        else font=(vga.draw.font_tables[(col >> 3)&1][chr*32+line])<<pel_pan;
+                }
+        }
+        if (!vga.draw.cursor.enabled || !(vga.draw.cursor.count&0x8)) goto skip_cursor;
+        font_addr = (vga.draw.cursor.address-vidstart) >> 1;
+        if (font_addr>=0 && font_addr<(Bits)vga.draw.blocks) {
+                if (line<vga.draw.cursor.sline) goto skip_cursor;
+                if (line>vga.draw.cursor.eline) goto skip_cursor;
+                draw=&TempLine[font_addr*9];
+                Bit8u fg=vga.tandy.draw_base[vga.draw.cursor.address+1]&0xf;
+                *draw++=fg;             *draw++=fg;             *draw++=fg;             *draw++=fg;
+                *draw++=fg;             *draw++=fg;             *draw++=fg;             *draw++=fg;
+        }
+skip_cursor:
+        return TempLine;
+}
+
 /*
 // combined 8/9-dot wide text mode 8bpp line drawing function
 static Bit8u* VGA_TEXT_Draw_Line(Bitu vidstart, Bitu line) {
@@ -645,6 +703,71 @@ static Bit8u* VGA_TEXT_Draw_Line(Bitu vidstart, Bitu line) {
 	return TempLine+16;
 }
 */
+
+static Bit8u * VGA_TEXT_Xlat16_Draw_Line_9(Bitu vidstart, Bitu line) {
+        Bits font_addr;
+        Bit16u * draw=(Bit16u *)TempLine;
+        bool underline=(Bitu)(vga.crtc.underline_location&0x1f)==line;
+        Bit8u pel_pan=(Bit8u)vga.draw.panning;
+        if ((vga.attr.mode_control&0x20) && (vga.draw.lines_done>=vga.draw.split_line)) pel_pan=0;
+        const Bit8u* vidmem = VGA_Text_Memwrap(vidstart);
+        Bit8u chr=vidmem[0];
+        Bit8u col=vidmem[1];
+        Bit8u font=(vga.draw.font_tables[(col >> 3)&1][chr*32+line])<<pel_pan;
+        if (underline && ((col&0x07) == 0x01)) font=0xff;
+        Bit8u fg=col&0xf;
+        Bit8u bg=(Bit8u)(TXT_BG_Table[col>>4]&0xff);
+        Bitu draw_blocks=vga.draw.blocks;
+        draw_blocks++;
+        for (Bitu cx=1;cx<draw_blocks;cx++) {
+                if (pel_pan) {
+                        chr=vidmem[cx*2];
+                        col=vidmem[cx*2+1];
+                        if (underline && ((col&0x07) == 0x01)) font|=0xff>>(8-pel_pan);
+                        else font|=vga.draw.font_tables[(col >> 3)&1][chr*32+line]>>(8-pel_pan);
+                        fg=col&0xf;
+                        bg=(Bit8u)(TXT_BG_Table[col>>4]&0xff);
+                } else {
+                        chr=vidmem[(cx-1)*2];
+                        col=vidmem[(cx-1)*2+1];
+                        if (underline && ((col&0x07) == 0x01)) font=0xff;
+                        else font=vga.draw.font_tables[(col >> 3)&1][chr*32+line];
+                        fg=col&0xf;
+                        bg=(Bit8u)(TXT_BG_Table[col>>4]&0xff);
+                }
+                if (FontMask[col>>7]==0) font=0;
+                Bit8u mask=0x80;
+                for (int i = 0; i < 7; i++) {
+                        *draw++=vga.dac.xlat16[font&mask?fg:bg];
+                        mask>>=1;
+                }
+                Bit16u lastval=vga.dac.xlat16[font&mask?fg:bg];
+                *draw++=lastval;
+                *draw++=(((vga.attr.mode_control&0x04) && ((chr<0xc0) || (chr>0xdf))) && 
+                        !(underline && ((col&0x07) == 0x01))) ? 
+                        (vga.dac.xlat16[bg]) : lastval;
+                if (pel_pan) {
+                        if (underline && ((col&0x07) == 0x01)) font=0xff;
+                        else font=(vga.draw.font_tables[(col >> 3)&1][chr*32+line])<<pel_pan;
+                }
+        }
+        if (!vga.draw.cursor.enabled || !(vga.draw.cursor.count&0x8)) goto skip_cursor;
+        font_addr = (vga.draw.cursor.address-vidstart) >> 1;
+        if (font_addr>=0 && font_addr<(Bits)vga.draw.blocks) {
+                if (line<vga.draw.cursor.sline) goto skip_cursor;
+                if (line>vga.draw.cursor.eline) goto skip_cursor;
+                draw=(Bit16u*)&TempLine[font_addr*18];
+                Bit8u fg=vga.tandy.draw_base[vga.draw.cursor.address+1]&0xf;
+                for(int i = 0; i < 8; i++) {
+                        *draw++ = vga.dac.xlat16[fg];
+                }
+                //if(underline && ((col&0x07) == 0x01)) 
+                //      *draw = vga.dac.xlat16[fg];
+        }
+skip_cursor:
+        return TempLine;
+}
+
 
 // combined 8/9-dot wide text mode 16bpp line drawing function
 static uint8_t *VGA_TEXT_Xlat16_Draw_Line(Bitu vidstart, Bitu line)
@@ -1029,6 +1152,7 @@ static void VGA_VerticalTimer(uint32_t /*val*/)
 		FALLTHROUGH;
 	case M_LIN8:
 	case M_LIN15:
+	case M_LIN24:
 	case M_LIN16:
 	case M_LIN32:
 		vga.draw.byte_panning_shift = 4;
@@ -1126,6 +1250,7 @@ void VGA_CheckScanLength(void) {
 	case M_LIN8:
 	case M_LIN15:
 	case M_LIN16:
+	case M_LIN24:
 	case M_LIN32:
 		vga.draw.address_add=vga.config.scan_len*8;
 		break;
@@ -1497,6 +1622,9 @@ void VGA_SetupDrawing(uint32_t /*val*/)
 	case M_LIN16:
 		bpp = 16;
 		break;
+	case M_LIN24:
+		bpp = 24;
+		break;
 	case M_LIN32:
 	case M_CGA2_COMPOSITE:
 	case M_CGA4_COMPOSITE:
@@ -1524,13 +1652,14 @@ void VGA_SetupDrawing(uint32_t /*val*/)
 			width >>=1;
 		}
 		// fall-through
+	case M_LIN24:
 	case M_LIN32:
 		width<<=3;
 		if (vga.crtc.mode_control & 0x8) {
  			doublewidth = true;
 			if (vga.mode == M_LIN32) {
 				// vesa modes 10f/190/191/192
-				aspect_ratio *= 2.0;
+				// aspect_ratio *= 2.0;
 			}
 		}
 		/* Use HW mouse cursor drawer if enabled */
@@ -1540,11 +1669,19 @@ void VGA_SetupDrawing(uint32_t /*val*/)
  	case M_LIN16:
 		// 15/16 bpp modes double the horizontal values
 		width<<=2;
-		if ((vga.crtc.mode_control & 0x8) || (svgaCard == SVGA_S3Trio && (vga.s3.pll.cmd & 0x10)))
+		LOG_INFO("VGA: 15/16-bit vga.crtc.mode_control = %x (& 0x8 is %s), vga.s3.pll.cmd = %x (& 0x10 is %s)",
+			vga.crtc.mode_control, 
+			(vga.crtc.mode_control & 0x8) ? "true" : "false", 
+			vga.s3.pll.cmd,
+			(vga.s3.pll.cmd & 0x10) ? "true" : "false");
+
+		if ((vga.crtc.mode_control & 0x8) || (svgaCard == SVGA_S3Trio && (vga.s3.pll.cmd & 0x10))) {
 			doublewidth = true;
-		else {
+			LOG_INFO("VGA: double-width mode");
+		} else {
+			LOG_INFO("VGA: non-double-width mode");
 			// vesa modes 165/175
-			aspect_ratio /= 2.0;
+			//aspect_ratio *= 2.0;
 		}
 		/* Use HW mouse cursor drawer if enabled */
 		VGA_ActivateHardwareCursor();
@@ -1597,25 +1734,24 @@ void VGA_SetupDrawing(uint32_t /*val*/)
 		VGA_DrawLine=VGA_Draw_1BPP_Line;
 		break;
 	case M_TEXT:
+		aspect_ratio=1.0;
 		vga.draw.blocks=width;
 		doublewidth=(vga.seq.clocking_mode & 0x8) > 0;
-		if ((IS_VGA_ARCH) && (svgaCard==SVGA_None)) {
-			// vgaonly: allow 9-pixel wide fonts
-			if (vga.seq.clocking_mode&0x01) {
-				vga.draw.char9dot = false;
-				width*=8;
-			} else {
-				vga.draw.char9dot = true;
-				width*=9;
-				aspect_ratio *= 1.125;
-			}
-			VGA_DrawLine=VGA_TEXT_Xlat16_Draw_Line;
-			bpp = 16;
+		if ((IS_VGA_ARCH) && !(vga.seq.clocking_mode&0x01)) {
+			vga.draw.char9dot = true;
+			width*=9;
+			aspect_ratio *= 1.125;
+			if (svgaCard==SVGA_None) {
+				VGA_DrawLine=VGA_TEXT_Xlat16_Draw_Line; // VGA_TEXT_Xlat16_Draw_Line_9;
+				bpp=16;
+			} else VGA_DrawLine= /*VGA_TEXT_Draw_Line */ VGA_TEXT_Draw_Line_9 ;
 		} else {
-			// not vgaonly: force 8-pixel wide fonts
-			width*=8; // 8 bit wide text font
 			vga.draw.char9dot = false;
-			VGA_DrawLine=VGA_TEXT_Draw_Line;
+			width*=8;  /* 8 bit wide text font */
+			if (svgaCard==SVGA_None) {
+				VGA_DrawLine=VGA_TEXT_Xlat16_Draw_Line;
+				bpp=16;
+			} else VGA_DrawLine=VGA_TEXT_Draw_Line;
 		}
 		break;
 	case M_HERC_GFX:
@@ -1806,12 +1942,13 @@ void VGA_SetupDrawing(uint32_t /*val*/)
 		vga.draw.bpp = bpp;
 		if (doubleheight) vga.draw.lines_scaled=2;
 		else vga.draw.lines_scaled=1;
-#if C_DEBUG
-		LOG(LOG_VGA, LOG_NORMAL)("Width %d, Height %d, fps %f", width, height, static_cast<double>(fps));
-		LOG(LOG_VGA, LOG_NORMAL)("%s width, %s height aspect %f", 
+
+//#if C_DEBUG
+		LOG_INFO("Width %d, Height %d, fps %f", width, height, fps);
+		LOG_INFO("%s width, %s height aspect %f", 
 		                         doublewidth ? "double" : "normal", doubleheight ? "double" : "normal",
 		                         static_cast<double>(aspect_ratio));
-#endif
+//#endif
 		if (!vga.draw.vga_override)
 			RENDER_SetSize(width, height, bpp, fps,
 			               static_cast<double>(aspect_ratio),

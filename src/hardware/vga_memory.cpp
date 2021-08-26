@@ -848,6 +848,7 @@ void VGA_SetupHandlers(void) {
 		break;	
 	case M_LIN15:
 	case M_LIN16:
+	case M_LIN24:
 	case M_LIN32:
 #ifdef VGA_LFB_MAPPED
 		newHandler = &vgaph.map;
@@ -930,18 +931,20 @@ range_done:
 
 void VGA_StartUpdateLFB(void) {
 	vga.lfb.page = vga.s3.la_window << 4;
+	
 	vga.lfb.addr = vga.s3.la_window << 16;
 #ifdef VGA_LFB_MAPPED
 	vga.lfb.handler = &vgaph.lfb;
 #else
 	vga.lfb.handler = &vgaph.lfbchanges;
 #endif
-	MEM_SetLFB(vga.s3.la_window << 4 ,vga.vmemsize/4096, vga.lfb.handler, &vgaph.mmio);
+	LOG_INFO("MEM_SetLFB: vga.lfb.addr (%u) ,vga.vmemsize/4096 (%d), ...)", vga.lfb.page, vga.vmemsize/4096);
+	MEM_SetLFB(vga.lfb.page,vga.vmemsize/4096, vga.lfb.handler, &vgaph.mmio);
 }
 
 static void VGA_Memory_ShutDown(Section * /*sec*/) {
 	delete[] vga.mem.linear_orgptr;
-	delete[] vga.fastmem_orgptr;
+	// delete[] vga.fastmem_orgptr;
 #ifdef VGA_KEEP_CHANGES
 	delete[] vga.changes.map;
 #endif
@@ -951,17 +954,33 @@ void VGA_SetupMemory(Section* sec) {
 	vga.svga.bank_read = vga.svga.bank_write = 0;
 	vga.svga.bank_read_full = vga.svga.bank_write_full = 0;
 
-	Bit32u vga_allocsize=vga.vmemsize;
-	// Keep lower limit at 512k
-	if (vga_allocsize<512*1024) vga_allocsize=512*1024;
-	// We reserve extra 2K for one scan line
-	vga_allocsize+=2048;
-	vga.mem.linear_orgptr = new Bit8u[vga_allocsize+16];
-	vga.mem.linear=(Bit8u*)(((Bitu)vga.mem.linear_orgptr + 16-1) & ~(16-1));
-	memset(vga.mem.linear,0,vga_allocsize);
+	const auto alignment_extra = sizeof(uint32_t);
+	size_t vga_allocsize=vga.vmemsize + alignment_extra;
 
-	vga.fastmem_orgptr = new Bit8u[(vga.vmemsize<<1)+4096+16];
-	vga.fastmem=(Bit8u*)(((Bitu)vga.fastmem_orgptr + 16-1) & ~(16-1));
+	// Keep lower limit at 512k
+	if (vga_allocsize<512*1024) vga_allocsize=512*1024 + alignment_extra;
+	// We reserve extra 2K for one scan line
+
+	vga_allocsize+=2048;
+
+	vga.mem.linear_orgptr = new uint8_t[vga_allocsize];
+	memset(vga.mem.linear_orgptr ,0,vga_allocsize);
+
+	void * p = vga.mem.linear_orgptr;
+	if(std::align(alignment_extra, vga.vmemsize, p, vga_allocsize)) {
+		LOG_INFO("VGA_MEMORY: Aligned %u bytes within %u on %u boundary", vga.vmemsize, vga_allocsize, alignment_extra);
+		vga.mem.linear = reinterpret_cast<uint8_t *>(p);
+	}
+
+	vga_allocsize *= 2;
+	vga.fastmem_orgptr = new uint8_t[vga_allocsize];
+	memset(vga.fastmem_orgptr ,0,vga_allocsize);
+
+	p = vga.fastmem_orgptr;
+	if(std::align(alignment_extra, vga.vmemsize * 2, p, vga_allocsize)) {
+		LOG_INFO("VGA_MEMORY: Aligned fastmem %u bytes within %u on %u boundary", 2 * vga.vmemsize, vga_allocsize, alignment_extra);
+		vga.fastmem = reinterpret_cast<uint8_t *>(p);
+	}
 
 	// In most cases these values stay the same. Assumptions: vmemwrap is power of 2,
 	// vmemwrap <= vmemsize, fastmem implicitly has mem wrap twice as big
