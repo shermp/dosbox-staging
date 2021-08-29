@@ -305,7 +305,7 @@ jobs:
           hdiutil create \
               -volname "dosbox-staging" \
               -srcfolder dist \
-              -ov -format UDZO "dosbox-staging-macOS-${{ env.VERSION }}.dmg"
+              -ov -format UDZO "dosbox-staging-macOS-universal.dmg"
 
       - name:  Install Clam AV
         if:    matrix.runner.needs_deps
