@@ -310,16 +310,6 @@ jobs:
               -srcfolder dist \
               -ov -format UDZO "dosbox-staging-macOS-universal.dmg"
 
-      - uses:  actions/cache@v2
-        if:    matrix.runner.arch == 'arm64'
-        if:    matrix.runner.needs_deps
-        id:    cache-clamdb
-        with:
-          path: ${{ env.CLAMDB_DIR }}/**/*.cvd
-          key:  clamdb-macos-${{ steps.prep-clamdb.outputs.today }}
-          restore-keys: |
-            clamdb-macos-
-
       - name: Clam AV scan
         if:  matrix.runner.arch == 'arm64'
         run: |
