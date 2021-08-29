@@ -216,6 +216,7 @@ jobs:
         run:  scripts/version.sh >> $GITHUB_ENV
 
       - name: Setup release build
+        if:  matrix.runner.arch == 'arm64'
         run: |
           PATH=/usr/local/bin:$PATH arch -x86_64 meson setup \
             --wrap-mode=forcefallback \
@@ -240,11 +241,13 @@ jobs:
           mkdir build
 
       - name: Build
+        if:  matrix.runner.arch == 'arm64'
         run: |
           PATH=/usr/local/bin:$PATH arch -x86_64 ninja -C build-x86_64
           PATH=/usr/local/bin:$PATH arch -arm64 ninja -C build-arm64
 
       - name: Package
+        if:  matrix.runner.arch == 'arm64'
         run: |
           set -x
 
@@ -335,11 +338,12 @@ jobs:
           clamscan --heuristic-scan-precedence=yes --recursive --infected dist
 
       - name: Upload disk image
+        if:  matrix.runner.arch == 'arm64'
         uses: actions/upload-artifact@v2
         # GitHub automatically zips the artifacts, and there's no option
         # to skip it or upload a file only.
         with:
-          name: dosbox-staging-macOS-${{ matrix.runner.arch }}
+          name: dosbox-staging-macOS-universal
           path: dosbox-staging-macOS-${{ env.VERSION }}.dmg
 
   # This job exists only to publish an artifact with version info when building
