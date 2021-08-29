@@ -150,8 +150,8 @@ jobs:
         run:  arch -arch=${{ matrix.conf.arch }} python3 ./scripts/count-warnings.py -lf build.log
 
   build_macos_release:
-    name: Release build (${{ matrix.runner.arch }})
-    runs-on: ${{ matrix.runner.host }}
+    name: Release build (universal)
+    runs-on: arm64
     if: github.event_name != 'pull_request' || contains('dreamer,kcgen,ant-222,Wengier,kklobe', github.actor) == false
 
     strategy:
