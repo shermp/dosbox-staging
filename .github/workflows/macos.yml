@@ -204,6 +204,7 @@ jobs:
           restore-keys: ccache-macos-release-${{ matrix.runner.arch }}-
 
       - name:  Cache subprojects
+        if:    matrix.runner.needs_deps
         uses:  actions/cache@v2
         with:
           path: subprojects/packagecache
