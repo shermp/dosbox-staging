@@ -217,7 +217,7 @@ jobs:
 
       - name: Setup release build
         run: |
-          arch -arch=${{ matrix.runner.arch }} meson setup \
+          PATH=/usr/local/bin:$PATH arch -x86_64 meson setup \
             --wrap-mode=forcefallback \
             -Dbuildtype=release \
             -Ddefault_library=static \
@@ -226,18 +226,31 @@ jobs:
             -Dtry_static_libs=opusfile,png,sdl2,sdl2_net \
             -Dfluidsynth:enable-floats=true \
             -Dfluidsynth:try-static-deps=true \
-            build
+            build-x86_64
+          PATH=/opt/homebrew/bin:$PATH arch -arm64 meson setup \
+            --wrap-mode=forcefallback \
+            -Dbuildtype=release \
+            -Ddefault_library=static \
+            -Db_asneeded=true \
+            -Db_lto=true \
+            -Dtry_static_libs=opusfile,png,sdl2,sdl2_net \
+            -Dfluidsynth:enable-floats=true \
+            -Dfluidsynth:try-static-deps=true \
+            build-arm64
+          mkdir build
 
       - name: Build
-        run:  arch -arch=${{ matrix.runner.arch }} ninja -C build
+        run: |
+          PATH=/usr/local/bin:$PATH arch -x86_64 ninja -C build-x86_64
+          PATH=/usr/local/bin:$PATH arch -arm64 ninja -C build-arm64
 
       - name: Package
         run: |
           set -x
 
           # Print shared object dependencies
-          otool -L build/dosbox
-          python3 scripts/verify-macos-dylibs.py build/dosbox
+          otool -L build-arm64/dosbox
+          python3 scripts/verify-macos-dylibs.py build-arm64/dosbox
 
           # Generate icon
           make -C contrib/icons/ dosbox-staging.icns
@@ -248,6 +261,8 @@ jobs:
           install -d "$dst/MacOS/"
           install -d "$dst/Resources/"
           install -d "$dst/SharedSupport/"
+
+          lipo -create -output build/dosbox build-x86_64/dosbox build-arm64/dosbox
 
           install        "build/dosbox"                      "$dst/MacOS/"
           install -m 644 "contrib/macos/Info.plist.template" "$dst/Info.plist"
