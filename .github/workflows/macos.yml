@@ -310,19 +310,6 @@ jobs:
               -srcfolder dist \
               -ov -format UDZO "dosbox-staging-macOS-universal.dmg"
 
-      - name:  Install Clam AV
-        if:    matrix.runner.arch == 'arm64'
-        if:    matrix.runner.needs_deps
-        id:    prep-clamdb
-        shell: bash
-        run: |
-          brew install clamav > /dev/null
-          clamconf=/usr/local/etc/clamav/freshclam.conf
-          mv -f "$clamconf".sample "$clamconf"
-          sed -ie 's/^Example/#Example/g' "$clamconf"
-          sed -ie 's/30/20000/g' "$clamconf"
-          echo "::set-output name=today::$(date +%F)"
-
       - uses:  actions/cache@v2
         if:    matrix.runner.arch == 'arm64'
         if:    matrix.runner.needs_deps
