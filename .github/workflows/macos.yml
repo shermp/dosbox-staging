@@ -311,6 +311,7 @@ jobs:
               -ov -format UDZO "dosbox-staging-macOS-universal.dmg"
 
       - name:  Install Clam AV
+        if:    matrix.runner.arch == 'arm64'
         if:    matrix.runner.needs_deps
         id:    prep-clamdb
         shell: bash
@@ -323,6 +324,7 @@ jobs:
           echo "::set-output name=today::$(date +%F)"
 
       - uses:  actions/cache@v2
+        if:    matrix.runner.arch == 'arm64'
         if:    matrix.runner.needs_deps
         id:    cache-clamdb
         with:
@@ -332,6 +334,7 @@ jobs:
             clamdb-macos-
 
       - name: Clam AV scan
+        if:  matrix.runner.arch == 'arm64'
         run: |
           set -x
           freshclam --foreground
