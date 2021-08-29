@@ -216,6 +216,7 @@ jobs:
         run:  scripts/version.sh >> $GITHUB_ENV
 
       - name: Setup release build
+        host: arm64
         run: |
           PATH=/usr/local/bin:$PATH arch -x86_64 meson setup \
             --wrap-mode=forcefallback \
@@ -240,11 +241,13 @@ jobs:
           mkdir build
 
       - name: Build
+        host: arm64
         run: |
           PATH=/usr/local/bin:$PATH arch -x86_64 ninja -C build-x86_64
           PATH=/usr/local/bin:$PATH arch -arm64 ninja -C build-arm64
 
       - name: Package
+        host: arm64
         run: |
           set -x
 
@@ -308,6 +311,7 @@ jobs:
               -ov -format UDZO "dosbox-staging-macOS-universal.dmg"
 
       - name:  Install Clam AV
+        host: arm64
         if:    matrix.runner.needs_deps
         id:    prep-clamdb
         shell: bash
@@ -320,6 +324,7 @@ jobs:
           echo "::set-output name=today::$(date +%F)"
 
       - uses:  actions/cache@v2
+        host: arm64
         if:    matrix.runner.needs_deps
         id:    cache-clamdb
         with:
@@ -329,17 +334,19 @@ jobs:
             clamdb-macos-
 
       - name: Clam AV scan
+        host: arm64
         run: |
           set -x
           freshclam --foreground
           clamscan --heuristic-scan-precedence=yes --recursive --infected dist
 
       - name: Upload disk image
+        host: arm64
         uses: actions/upload-artifact@v2
         # GitHub automatically zips the artifacts, and there's no option
         # to skip it or upload a file only.
         with:
-          name: dosbox-staging-macOS-${{ matrix.runner.arch }}
+          name: dosbox-staging-macOS-universal.dmg
           path: dosbox-staging-macOS-${{ env.VERSION }}.dmg
 
   # This job exists only to publish an artifact with version info when building
