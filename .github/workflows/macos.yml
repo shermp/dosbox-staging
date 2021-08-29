@@ -219,7 +219,7 @@ jobs:
         if:  matrix.runner.arch == 'arm64'
         run: |
           PATH=/usr/local/bin:$PATH arch -x86_64 meson setup \
-            --wrap-mode=nodownload \
+            --wrap-mode=forcefallback \
             -Dbuildtype=release \
             -Ddefault_library=static \
             -Db_asneeded=true \
@@ -229,7 +229,7 @@ jobs:
             -Dfluidsynth:try-static-deps=true \
             build-x86_64
           PATH=/opt/homebrew/bin:$PATH arch -arm64 meson setup \
-            --wrap-mode=nodownload \
+            --wrap-mode=forcefallback \
             -Dbuildtype=release \
             -Ddefault_library=static \
             -Db_asneeded=true \
