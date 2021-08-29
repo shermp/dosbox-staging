@@ -243,7 +243,6 @@ jobs:
         if:  matrix.runner.arch == 'arm64'
         run: |
           ninja -C build-arm64
-          meson subprojects purge
           PATH=/usr/local/bin:$PATH arch -x86_64 ninja -C build-x86_64
 
       - name: Package
