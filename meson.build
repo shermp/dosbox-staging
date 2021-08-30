@@ -195,6 +195,7 @@ opengl_dep    = optional_dep
 fluid_dep     = optional_dep
 mt32emu_dep   = optional_dep
 png_dep       = optional_dep
+zlib_dep      = optional_dep
 pcap_dep      = optional_dep
 slirp_dep     = optional_dep
 curses_dep    = optional_dep # necessary for debugger builds
@@ -232,6 +233,7 @@ endif
 if get_option('use_png')
   png_dep = dependency('libpng', static : ('png' in static_libs_list),
                        not_found_message : msg.format('use_png'))
+  zlib_dep = dependency('zlib')
 endif
 
 if get_option('use_pcap') # disabled by default

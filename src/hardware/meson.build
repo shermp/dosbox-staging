@@ -66,6 +66,7 @@ libhardware = static_library('hardware', libhardware_sources,
                                libloguru_dep,
                                libnuked_dep,
                                libresidfp_dep,
+                               zlib_dep
                              ])
 
 libhardware_dep = declare_dependency(link_with : libhardware)
