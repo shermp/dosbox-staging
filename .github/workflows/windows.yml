@@ -78,11 +78,11 @@ jobs:
         run: Get-Content -Path vcpkg_installed/${{ matrix.conf.arch }}-windows/vcpkg/issue_body.md
 
       - name: Export vcpkg packages
-        run: vcpkg export --raw --output-dir=.
+        run: vcpkg export --zip --output-dir=.
 
       - name: Upload vcpkg export
         uses: actions/upload-artifact@v4
         with:
           name: vcpkg-export-${{ matrix.conf.arch }}-windows
-          path: vcpkg-export-*
+          path: vcpkg-export-*.zip
   
